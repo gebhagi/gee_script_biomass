@@ -1,0 +1,294 @@
+//import shapefile for study area
+//import shapefile for sample points  
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+
+  // Bits 10 and 11 are clouds and cirrus, respectively.
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+
+  // Both flags should be set to zero, indicating clear conditions.
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0)
+      .and(qa.bitwiseAnd(cirrusBitMask).eq(0));
+
+  return image.updateMask(mask).divide(10000);
+}
+// Acquiring Sentinel Datasets and applying Filters //
+var dataset = ee.ImageCollection('COPERNICUS/S2_SR')
+                  .filterDate('2017-02-01', '2019-08-02')
+                  // Pre-filter to get less cloudy granules.
+                  //.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE',20))
+                  .filterBounds(table)
+                  .map(maskS2clouds)
+                  .median();
+  print(dataset);
+  dataset = dataset.clip(table);
+ var trueColorVis = {min: 0, max: 0.3, bands: ['B4','B3','B2']};
+Map.addLayer(dataset.clip(table), trueColorVis, 'dataset');
+
+Map.setCenter(84.488, 27.669,15);
+Map.addLayer(table,{},'chure');
+Map.addLayer(points,{},'points');
+/////Extract training data from select bands of the image
+//var label = 'Class';
+var bands =['B2','B3','B4','B5','B6','B7','B8','B11','B12'];
+var input = dataset.select(bands);
+var trueColorVis1 = {min: 0, max: 0.3, bands: ['B4','B3','B2']};
+Map.addLayer(input, trueColorVis1, 'input');
+// // Define the output projection
+// var outputProjection = 'EPSG:32644'; // WGS 1984 UTM Zone 44N
+
+// // Reproject the image to the output projection
+// var projectedImage = input.reproject({
+//   crs: outputProjection,
+//   scale: 20 // Set the pixel scale to 20 meters
+// });
+print(input)
+// Calculate NDVI
+var ndvi = input.normalizedDifference(['B8', 'B4']);
+
+Map.addLayer(ndvi.clip(table), {min: -1, max: 1, palette: ['blue', 'white', 'green']}, 'NDVI');
+
+//Calculate GNDVI
+var gndvi = input.normalizedDifference(['B8', 'B3']);
+
+Map.addLayer(gndvi.clip(table), {min: -1, max: 1, palette: ['blue', 'white', 'green']}, 'GNDVI');
+
+
+//Define necessary bands for IRECI calculation
+var red = input.select('B4');
+var red1 = input.select('B5');
+var red2 = input.select('B6');
+var red3 = input.select('B7');
+
+// Calculate IRECI
+var ireci = red3.subtract(red).divide(red1.divide(red2));
+
+// Display the IRECI image
+Map.addLayer(ireci.clip(table), {min: -1, max: 1, palette: ['blue', 'white', 'green']}, 'IRECI');
+
+//Define necessary bands for EVI calculation
+var red = input.select('B4');
+var nir = input.select('B8');
+var blue = input.select('B2');
+
+// Calculate EVI
+var evi = nir.subtract(red)
+  .divide(nir.add(red.multiply(6)).subtract(blue.multiply(7.5)).add(1)).multiply(2.5);
+
+// Display the EVI image
+Map.addLayer(evi.clip(table), {min: -1, max: 1, palette: ['blue', 'white', 'green']}, 'EVI');
+  
+  // Calculate GDVI
+
+var numerator = nir.pow(2).subtract(red.pow(2)); // Calculate numerator
+var denominator = nir.pow(2).add(red.pow(2)); // Calculate denominator
+var gdvi = numerator.divide(denominator); // Calculate GDVI
+
+// Display the result on the map
+Map.addLayer(gdvi.clip(table), {min: -1, max: 1, palette: ["red", "yellow", "green"]}, "GDVI");
+  
+// Define the necessary bands for SAVI calculation
+var red = input.select('B4');
+var nir = input.select('B8');
+
+// Define the SAVI parameters
+var L = 0.5;  // Soil brightness factor
+// var C1 = 0.2; // Canopy background adjustment factor
+
+// Calculate SAVI
+var savi = nir.subtract(red).divide(nir.add(red).add(L)).multiply(1 + L);
+
+// Display the SAVI image
+Map.addLayer(savi.clip(table), {min: -1, max: 1, palette: ['blue', 'white', 'green']}, 'SAVI');
+
+// Define the necessary bands for red edge 1 ndvi calculation
+var nir = input.select('B8');
+var redEdge = input.select('B5');
+
+// Calculate Red Edge 1 NDVI
+var redEdge1NDVI = input.normalizedDifference(['B8', 'B5']);
+
+// Display the Red Edge 1 NDVI image
+Map.addLayer(redEdge1NDVI.clip(table), {min: -1, max: 1, palette: ['blue', 'white', 'green']}, 'Red Edge 1 NDVI');
+
+// Calculate Red Edge 1 NDVI
+var redEdge2NDVI = input.normalizedDifference(['B8', 'B6']);
+
+// Display the Red Edge 2 NDVI image
+Map.addLayer(redEdge2NDVI.clip(table), {min: -1, max: 1, palette: ['blue', 'white', 'green']}, 'Red Edge 2 NDVI');
+
+// Calculate Red Edge 3 NDVI
+var redEdge3NDVI = input.normalizedDifference(['B8', 'B7']);
+
+// Display the Red Edge 3 NDVI image
+Map.addLayer(redEdge3NDVI.clip(table), {min: -1, max: 1, palette: ['blue', 'white', 'green']}, 'Red Edge 3 NDVI');
+
+// Calculate NDI45
+var ndi45 = input.normalizedDifference(['B5', 'B4']);
+
+// Display the NDI45 image
+Map.addLayer(ndi45.clip(table), {min: -1, max: 1, palette: ['blue', 'white', 'green']}, 'NDI45');
+
+
+// Calculate Simple Ratio
+var SR = input.select('B8').divide(input.select('B4'));
+
+// Display the simple ratio image
+Map.addLayer(SR.clip(table), {min: 0, max: 20}, 'Simple Ratio');
+
+// Calculate Red to Green Ratio
+var RGR = input.select('B4').divide(input.select('B3'));
+
+// Display the ratio image
+Map.addLayer(RGR.clip(table), {min: 0, max: 10}, 'Red to Green Ratio');
+
+
+ var brightness = input.expression(
+  '(0.3029 * B2) + (0.2786 * B3) + (0.4733 * B4) + (0.5599 * B8) + (0.5080 * B11) + (0.1872 * B12)',
+  {
+    'B2': input.select('B2'), // Blue band
+    'B3': input.select('B3'), // Green band
+    'B4': input.select('B4'), // Red band
+    'B8': input.select('B8'), // Near-Infrared band
+    'B11': input.select('B11'), // Shortwave Infrared 1 band
+    'B12': input.select('B12')  // Shortwave Infrared 2 band
+  }
+).rename('BRIGHTNESS');
+
+Map.addLayer(brightness.clip(table),{min:0, max:10},'BRIGHTNESS');
+
+
+var wetness = input.expression(
+'0.151 * B3 + 0.197 * B4 - 0.328 * B8 + 0.340 * B11 - 0.711 * B12',
+  {
+    'B3': input.select('B3'), // Green band
+    'B4': input.select('B4'), // Red band
+    'B8': input.select('B8'), // Near-Infrared band
+    'B11': input.select('B11'), // Shortwave Infrared 1 band
+    'B12': input.select('B12')  // Shortwave Infrared 2 band
+  }
+).rename('WETNESS');
+
+Map.addLayer(wetness.clip(table),{min:0, max:10},'WETNESS');
+
+var greenness = input.expression(
+'0.6685 * B4 - 0.2848 * B3 - 0.0002 * B8 - 0.0721 * B11 - 0.5020 * B12',
+  {
+    'B3': input.select('B3'), // Green band
+    'B4': input.select('B4'), // Red band
+    'B8': input.select('B8'), // Near-Infrared band
+    'B11': input.select('B11'), // Shortwave Infrared 1 band
+    'B12': input.select('B12')  // Shortwave Infrared 2 band
+  }
+).rename('GREENNESS');
+
+Map.addLayer(greenness.clip(table),{min:0, max:10},'GREENNESS');
+
+var s2img = ee.Image().addBands(ndvi.rename('NDVI'))
+                  .addBands(gndvi.rename('GNDVI'))
+                  .addBands(ireci.rename('IRECI'))
+                  .addBands(ndi45.rename('NDI45'))
+                  .addBands(evi.rename('EVI'))
+                  .addBands(savi.rename('SAVI'))
+                  .addBands(redEdge1NDVI.rename('RE1NDVI'))
+                  .addBands(redEdge2NDVI.rename('RE2NDVI'))
+                 .addBands(redEdge3NDVI.rename('RE3NDVI'))
+                .addBands(RGR.rename('Red to Green Ratio'))
+                  .addBands(SR.rename('Simple Ratio'))
+                  .addBands(gdvi.rename('GDVI'))
+                 .addBands(brightness.rename('BRIGHTNESS'))
+                 .addBands(wetness.rename('WETNESS'))
+                 .addBands(greenness.rename('GREENNESS'))
+                 
+                   s2img = s2img.toFloat();
+                  // var band1=s2img.select('')
+                  print(s2img);
+                  var floatee = s2img.float();
+                  print(floatee)
+var sindices =['NDVI','GNDVI','NDI45','IRECI','EVI','IRECI','SR','RGR','RE1NDVI','RE2NDVI','RE3NDVI','SAVI','BRIGHTNESS','WETNESS','GREENNESS'];
+// var input = s2img.select(bands);
+var outputCRS = 'EPSG:32644';
+var targetProjection = 'EPSG:32645'; // WGS 1984 UTM Zone 45N
+
+// Reproject the image to the target projection.
+var projectedImage = floatee.reproject(targetProjection);
+
+// Extract the values of the "B2" and "B3" bands at the points.
+var values = projectedImage.sampleRegions({
+  collection: points,
+  scale: 10,
+  tileScale:16,
+});
+
+// Print the result.
+print(values);
+
+var bufferDistance = 20; // buffer distance in meters
+var bufferedPoints = points.map(function(feature) {
+  return feature.buffer(bufferDistance);
+});
+Map.addLayer(bufferedPoints)
+var a= projectedImage
+var resample = a.resample('bilinear').reproject({
+crs: 'EPSG:32644',
+scale: 20.0})
+var image= resample.clipToCollection(bufferedPoints);
+Map.addLayer(image)
+var meanValues = resample.reduceRegions({
+  collection: bufferedPoints,
+  reducer: ee.Reducer.mean(),
+  scale: 20,
+  crs: 'EPSG:32644',
+  
+  // maxPixels:1e50,
+  tileScale:16,
+});
+print(meanValues);
+Export.image.toDrive(
+  {image: resample.clip(points), 
+  description:'jpt',
+  scale: 20,
+  // tileScale:16,
+  maxPixels:1e50
+  } )
+
+// // Define the export parameters.
+var exportParams = {
+  collection: meanValues,
+  description: 'mean_indices_s2',
+  fileFormat: 'CSV',
+  // tileScale:16,
+  // maxPixel:1e50,
+};
+
+// Export the table to Google Drive.
+Export.table.toDrive(exportParams);
+
+//Biomass estimation using gee
+// biomass_estimation = constant+ (-evi coefficient* evi bands).... so on
+
+var biomassEstimation = ee.Image.constant(-74.685)
+    .add(s2img.select("NDVI").multiply(634.846))
+    .subtract(s2img.select("RE3NDVI").multiply(348.090))
+    .add(s2img.select("GREENNESS").multiply(902.941))
+    .add(s2img.select("BRIGHTNESS").multiply(150.578))
+    .subtract(s2img.select("Red to Green Ratio").multiply(69.298));
+
+Export.image.toDrive({
+  image:biomassEstimation,
+  folder:'biomass_s2',
+  scale:20,
+  description:'biomass_s2_corrected',
+  maxPixels:1e13,
+  region:table
+  
+})
+Export.image.toDrive({
+  image:gndvi,
+  folder:'indices_s2',
+  scale:20,
+  description:'gndvi_s2',
+  maxPixels:1e13,
+  region:table
+})
