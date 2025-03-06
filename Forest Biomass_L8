@@ -1,7 +1,9 @@
+//import study area(Chure region) boundary
 //import Landsat-8 image
-//import study area boundary
 //import sample plots point data
-  function maskL8sr(image) {
+  
+//Masking cloudy pixels
+function maskL8sr(image) {
   // Bit 0 - Fill
   // Bit 1 - Dilated Clouds
   // Bit 2 - Cirrus
@@ -216,7 +218,7 @@ var meanValues = resample.reduceRegions({
 });
 print(meanValues);
 
-//export
+//export image to google drive
 Export.image.toDrive({
   image: resample.clip(table),
   description: 'chure_landsat',
@@ -245,6 +247,7 @@ var biomassEstimation = ee.Image.constant(-146.167)
     .add(lsat8img.select("NDVI").multiply(603.292))
     .add(lsat8img.select("GREENNESS").multiply(1346.431))
 
+//Export biomass layer to Google Drive
 Export.image.toDrive({
   image:biomassEstimation,
   folder:'biomass_landsat',
@@ -254,11 +257,3 @@ Export.image.toDrive({
   region:table
 })
 
-Export.image.toDrive({
-  image:SR,
-  folder:'indices_l8',
-  scale:30,
-  description:'SR_l8',
-  maxPixels:1e13,
-  region:table
-})
