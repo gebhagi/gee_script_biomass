@@ -3,8 +3,8 @@
 This repository contains Google Earth Engine (GEE) scripts designed for downloading, pre-processing, processing, and deriving vegetation indices using Landsat 8 and Sentinel 2 imagery. 
 ## Contents
 
-- **Forest Biomass_L8**: Scripts related to biomass estimation using Landsat-8 data.
-- **Forest Biomass_S2**: Scripts related to biomass estimation using Sentinel-2 data.
+- **Forest Biomass_L8**: Scripts for downloading and processing Landsat-8 data.
+- **Forest Biomass_S2**: Scripts for downloading and processing Sentinel-2 data.
 
 ## Features
 
