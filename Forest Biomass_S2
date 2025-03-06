@@ -1,5 +1,6 @@
-//import shapefile for study area
-//import shapefile for sample points  
+///import study area(Chure region) boundary
+//import sample plots point data
+
 function maskS2clouds(image) {
   var qa = image.select('QA60');
 
